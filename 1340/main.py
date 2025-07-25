@@ -18,7 +18,7 @@ dynamo = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'us-west
 
 
 def query_table(message):
-    table = dynamo.Table(os.getenv('DYNAMODB_TABLE', 'message-history'))
+    table = dynamo.Table(os.getenv('time_string', 'message-history'))
     results = table.scan(
         FilterExpression="contains(#attr, :value)",
         ExpressionAttributeNames={
