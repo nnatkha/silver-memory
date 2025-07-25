@@ -14,16 +14,21 @@ SERVER_IP = "0.0.0.0"
 SERVER_PORT = 1340
 
 
-ddb = boto3.resource("dynamodb", region_name="us-west-2")
+dynamo = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'us-west-2'))
 
 
 def query_table(message):
-    table = ddb.Table("time_string")
-    response = table.query(
-        KeyConditionExpression=Key("string_name").contains(message)
+    table = dynamo.Table(os.getenv('DYNAMODB_TABLE', 'message-history'))
+    results = table.scan(
+        FilterExpression="contains(#attr, :value)",
+        ExpressionAttributeNames={
+        "#attr": "YourAttributeName"  # Replace with your attribute name
+        },
+        ExpressionAttributeValues={
+        ":value": "YourSearchValue"  # Replace with the value to search for
+        }
     )
-
-    return response
+    return results
 
 
 def get_entry(entry):
