@@ -17,17 +17,6 @@ SERVER_PORT = 1340
 ddb = boto3.resource("dynamodb", region_name="us-west-2")
 
 
-def log_message(string_name, SERVICE):
-    table = ddb.Table("time_string")
-    table.put_item(
-        Item={
-            "string_name": string_name,
-            "timestamp": datetime.now(),
-            "service": SERVICE,
-        }
-    )
-
-
 def query_table(message):
     table = ddb.Table("time_string")
     response = table.query(
