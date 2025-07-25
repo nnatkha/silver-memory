@@ -6,9 +6,26 @@ Description: Implement the server side of the socket
 """
 
 import socket
+import boto3
+from datetime import datetime
 
-SERVER_IP = "127.0.0.1"
+SERVER_IP = "0.0.0.0"
 SERVER_PORT = 1338
+SERVICE = "ohce"
+
+
+ddb = boto3.resource("dynamodb", region_name="us-west-2")
+
+
+def log_message(string_name):
+    table = ddb.Table("time_string")
+    table.put_item(
+        Item={
+            "string_name": string_name,
+            "timestamp": datetime.now(),
+            "service": SERVICE,
+        }
+    )
 
 
 def listen_socket(listen_address, listen_port):
@@ -43,6 +60,7 @@ def echo(server: socket.socket):
     while True:
         conn, addr = server.accept()
         data = conn.recv(4096)
+        log_message(data.decode("utf-8"))
         # reverse message
         reversed_data = data[::-1]
         conn.send(reversed_data)
