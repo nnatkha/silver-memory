@@ -10,8 +10,8 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
 
-SERVER_IP = "127.0.0.1"
-SERVER_PORT = 1337
+SERVER_IP = "0.0.0.0"
+SERVER_PORT = 1340
 
 
 ddb = boto3.resource("dynamodb", region_name="us-west-2")
