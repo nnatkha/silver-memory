@@ -6,7 +6,7 @@ Description: Implement the server side of the socket
 """
 
 import socket
-import boto3
+import boto3, os
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
 
