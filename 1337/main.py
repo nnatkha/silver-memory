@@ -39,8 +39,9 @@ def echo(server: socket.socket):
         server (socket.socket): Echo message back
     """
     while True:
-        data, addr = server.recvfrom(4096)
-        server.sendto(data, addr)
+        conn, addr = server.accept()
+        data = server.recv(4096)
+        conn.send(data)
 
 
 def main():
