@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM public.ecr.aws/q6s4e1n8/nukudo/rate-limiter-python3.11 
 
 WORKDIR /app
 

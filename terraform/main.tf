@@ -2,13 +2,6 @@ terraform {
     required_version = ">= 0.12"
 }
 
-required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-}
-
 provider "aws" {
     region = "us-west-2"
 }
@@ -18,27 +11,27 @@ variable "aws_id" {
     type        = string
 }
 
-variable "domain_name" {
-    description = "Domain name for the API Gateway"
-    type        = string
-}
-
 # fetch availability zones
 # this 
-data "aws_availability_zones" "available" {
-    state = "available"
-}  
+data "aws_availability_zones" "available" {}  
 
 # create a VPC & other networking resources
 resource "aws_vpc" "main" {
     cidr_block           = "10.0.0.0./16"
+    tags = { Name = "echo-vpc"}
 }
 
 resource "aws_subnet" "public" {
     count = 2
     vpc_id            = aws_vpc.main.id
-    cidr_block        = "10.0.${count.index + 1}.0/24"
+    cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+
     availability_zone = data.aws_availability_zones.available.names[count.index]
+    map_public_ip_on_launch = true
+    tags = {
+        Name = "echo-public-subnet-${count.index}"
+    }
+
 }
 
 resource "aws_internet_gateway" "main" {
@@ -51,6 +44,9 @@ resource "aws_route_table" "public" {
     route {
         cidr_block = "0.0.0.0/0"
         gateway_id = aws_internet_gateway.main.id
+    }
+    tags = {
+        Name = "echo-public-route-table"
     }
 }
 
@@ -79,9 +75,9 @@ resource "aws_dynamodb_table" "time_string" {
 
 # security group for all ports to interact with our application
 
-resource "aws_security_group" "api_sg" {
+resource "aws_security_group" "ecs_tasks" {
     name        = "allow_all_tcp"
-    description = "Allow all inbound traffic"
+    description = "Allow inbound traffic from nlb"
     vpc_id      = aws_vpc.main.id
 
     ingress {
@@ -100,7 +96,7 @@ resource "aws_security_group" "api_sg" {
 }
 
 # iam policy for code
-resource "aws_iam_policy_document" "ecs_task_policy" {
+data "aws_iam_policy_document" "ecs_task_policy" {
     statement {
         effect = "Allow"
         actions = [
@@ -116,7 +112,7 @@ resource "aws_iam_policy_document" "ecs_task_policy" {
 #dynamo db ecs task role
 resource "aws_iam_role" "db_ecs_task_role" {
     name               = "db_ecs_task_role"
-    assume_role_policy = aws_iam_policy_document.ecs_task_policy.json
+    assume_role_policy = data.aws_iam_policy_document.ecs_task_policy.json
 }  
 
 resource "aws_iam_role_policy" "db_access_policy" {
@@ -136,4 +132,39 @@ resource "aws_iam_role_policy" "db_access_policy" {
             }
         ]
     })
+}
+
+# ecs cluster
+resource "aws_ecs_cluster" "main" {
+    name = "echo-main-cluster"
+}
+
+# load balance
+resource "aws_lb" "main" {
+    name               = "main-lb"
+    internal           = false
+    load_balancer_type = "network"
+    subnets            = aws_subnet.public[*].id   
+}
+
+module "app_service" {
+  source = "../modules/app_service"
+
+  for_each = {
+    "echo-1337" = { port = 1337 }
+    "echo-1338" = { port = 1338 }
+    "echo-1440" = { port = 1440 }
+  }
+
+  name            = each.key
+  port            = each.value.port
+  image_uri       = "${var.aws_account_id}.dkr.ecr.us-east-1.amazonaws.com/${each.key}:latest"
+  vpc_id          = aws_vpc.main.id
+  subnets         = aws_subnet.public[*].id
+  security_groups = [aws_security_group.ecs_tasks.id]
+  ecs_cluster_id  = aws_ecs_cluster.main.id
+  lb_arn          = aws_lb.main.arn
+
+  task_role_arn = aws_iam_role.ecs_task_dynamodb_role.arn
+  table_name    = aws_dynamodb_table.query_log.name
 }
