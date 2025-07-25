@@ -7,7 +7,7 @@ Description: Implement the server side of the socket
 
 import socket
 
-SERVER_IP = "0.0.0.0"
+SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1337
 
 
@@ -22,7 +22,9 @@ def listen_socket(listen_address, listen_port):
     Returns:
         Socket: Socket that was initiated for listening
     """
+    #server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #socket.AF_INET,socket.SOCK_STREAM
     server = socket.socket()
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     server.bind((listen_address, listen_port))
 
@@ -40,17 +42,17 @@ def echo(server: socket.socket):
     """
     while True:
         conn, addr = server.accept()
-        data = server.recv(4096)
+        data = conn.recv(4096)
         conn.send(data)
+        conn.close()
 
 
 def main():
     """Main program logic"""
     server = listen_socket(SERVER_IP, SERVER_PORT)
 
-    with server:
-        echo(server)
-
+    echo(server)
+    
 
 if __name__ == "__main__":
     main()
