@@ -6,26 +6,25 @@ Description: Implement the server side of the socket
 """
 
 import socket
-import boto3
+import boto3, os
 from datetime import datetime
+import uuid
 
 SERVER_IP = "0.0.0.0"
 SERVER_PORT = 1337
 SERVICE = "echo"
 
 
-ddb = boto3.resource("dynamodb", region_name="us-west-2")
-
+dynamo = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'us-west-2'))
 
 def log_message(string_name):
-    table = ddb.Table("time_string")
-    table.put_item(
-        Item={
-            "string_name": string_name,
-            "timestamp": datetime.now(),
-            "service": SERVICE,
-        }
-    )
+    table = dynamo.Table(os.getenv('time_string', 'message-history'))
+    table.put_item(Item={
+        'id': str(uuid.uuid4()), 
+        'ts': datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        'data': string_name,
+        'sv': SERVICE,
+    })
 
 
 def listen_socket(listen_address, listen_port):
