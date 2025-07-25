@@ -22,10 +22,10 @@ def query_table(message):
     results = table.scan(
         FilterExpression="contains(#attr, :value)",
         ExpressionAttributeNames={
-        "#attr": "YourAttributeName"  # Replace with your attribute name
+        "#attr": "data"  # Replace with your attribute name
         },
         ExpressionAttributeValues={
-        ":value": "YourSearchValue"  # Replace with the value to search for
+        ":value": "message"  # Replace with the value to search for
         }
     )
     return results
