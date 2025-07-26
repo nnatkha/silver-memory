@@ -14,27 +14,21 @@ SERVER_IP = "0.0.0.0"
 SERVER_PORT = 1340
 
 
-dynamo = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'us-west-2'))
+dynamo = boto3.resource(
+    "dynamodb", region_name=os.getenv("AWS_REGION", "us-west-2")
+)
 
 
 def query_table(message):
-    table = dynamo.Table(os.getenv('time_string', 'message-history'))
+    table = dynamo.Table("time_string")
     results = table.scan(
-        FilterExpression="contains(#attr, :value)",
-        ExpressionAttributeNames={
-        "#attr": "data"  # Replace with your attribute name
-        },
-        ExpressionAttributeValues={
-        ":value": "message"  # Replace with the value to search for
-        }
+        FilterExpression=Attr("data").contains(message),
     )
-    return results
+    return results.get("Items", [])
 
 
 def get_entry(entry):
-    message = (
-        f"{entry['timestamp']} ({entry['service']}): {entry['string_name']}"
-    )
+    message = f"{entry.get('ts', '')} ({entry.get('sv', '')}): {entry.get('data', '')}"
     return message
 
 
